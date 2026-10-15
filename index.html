@@ -247,15 +247,51 @@ function sentenceSaveWrong(){try{localStorage.setItem('utabenkyo_sentence_wrong_
 function sentencePool(){const level=document.getElementById('sentenceDifficulty').value;const original=sentenceQuestions.map(q=>[...q,'easy']);return [...original,...sentenceMoreQuestions].filter(q=>q[3]===level)}
 function startSentenceReview(){sentenceGrading=false;const all=[...sentenceQuestions.map(q=>[...q,'easy']),...sentenceMoreQuestions];const missed=all.filter(q=>sentenceWrongSaved.has(q[2]));if(!missed.length){alert('아직 틀린 문장이 없어! ♡');return}sentenceReviewMode=true;sentenceDeck=shuffle(missed);sentenceIndex=0;sentenceCorrect=0;sentenceIncorrect=0;document.getElementById('sentenceResults').classList.add('hidden');document.getElementById('sentenceActive').classList.remove('hidden');view('sentencePractice');sentenceNext()}
 function startSentencePractice(){sentenceGrading=false;sentenceReviewMode=false;sentenceDeck=shuffle(sentencePool()).slice(0,10);sentenceIndex=0;sentenceCorrect=0;sentenceIncorrect=0;document.getElementById('sentenceResults').classList.add('hidden');document.getElementById('sentenceActive').classList.remove('hidden');view('sentencePractice');sentenceNext()}
-function sentenceNext(){clearTimeout(sentenceVoiceTimer);sentenceAudioToken++;if(sentenceAudioCurrent){sentenceAudioCurrent.pause();sentenceAudioCurrent=null}if(sentenceIndex>=sentenceDeck.length){document.getElementById('sentenceActive').classList.add('hidden');document.getElementById('sentenceResults').classList.remove('hidden');document.getElementById('sentenceProgress').textContent='연습 완료!';document.getElementById('sentenceSummary').textContent='총 '+sentenceDeck.length+'문장 중 맞음 '+sentenceCorrect+'개 ♡ / 틀림 '+sentenceIncorrect+'개';return}const q=sentenceDeck[sentenceIndex];sentenceShown=false;sentenceClear();document.getElementById('sentenceKorean').textContent=q[0];document.getElementById('sentenceRomaji').textContent=q[1];document.getElementById('sentenceAnswerText').textContent=q[2];document.getElementById('sentenceAnswerPanel').classList.add('hidden');document.getElementById('sentenceProgress').textContent=(sentenceIndex+1)+' / '+sentenceDeck.length;document.getElementById('sentenceRevealButton').classList.remove('hidden');document.getElementById('sentenceGradeButtons').classList.add('hidden');document.getElementById('sentenceHelp').textContent='손가락이나 애플펜슬로 문장을 써 줘 ♡';sentenceScheduleVoice()}
+function sentenceNext(){clearTimeout(sentenceVoiceTimer);sentenceAudioToken++;sentenceVoiceNodes.forEach(n=>{try{n.stop()}catch(e){}});sentenceVoiceNodes=[];if(sentenceAudioCurrent){sentenceAudioCurrent.pause();sentenceAudioCurrent=null}if(sentenceIndex>=sentenceDeck.length){document.getElementById('sentenceActive').classList.add('hidden');document.getElementById('sentenceResults').classList.remove('hidden');document.getElementById('sentenceProgress').textContent='연습 완료!';document.getElementById('sentenceSummary').textContent='총 '+sentenceDeck.length+'문장 중 맞음 '+sentenceCorrect+'개 ♡ / 틀림 '+sentenceIncorrect+'개';return}const q=sentenceDeck[sentenceIndex];sentenceShown=false;sentenceClear();document.getElementById('sentenceKorean').textContent=q[0];document.getElementById('sentenceRomaji').textContent=q[1];document.getElementById('sentenceAnswerText').textContent=q[2];document.getElementById('sentenceAnswerPanel').classList.add('hidden');document.getElementById('sentenceProgress').textContent=(sentenceIndex+1)+' / '+sentenceDeck.length;document.getElementById('sentenceRevealButton').classList.remove('hidden');document.getElementById('sentenceGradeButtons').classList.add('hidden');document.getElementById('sentenceHelp').textContent='손가락이나 애플펜슬로 문장을 써 줘 ♡';sentenceScheduleVoice()}
 function sentenceReveal(){if(sentenceShown)return;sentenceShown=true;document.getElementById('sentenceAnswerPanel').classList.remove('hidden');document.getElementById('sentenceRevealButton').classList.add('hidden');document.getElementById('sentenceGradeButtons').classList.remove('hidden');document.getElementById('sentenceHelp').textContent='위의 정답과 내가 쓴 문장을 비교해서 맞음 / 틀림을 골라 줘 ♡'}
 let sentenceGrading=false;
-function sentenceMark(ok){if(!sentenceShown||sentenceGrading)return;sentenceGrading=true;const q=sentenceDeck[sentenceIndex];if(ok){sentenceCorrect++;sentenceWrongSaved.delete(q[2])}else{sentenceIncorrect++;sentenceWrongSaved.add(q[2])}sentenceSaveWrong();sentenceAudioToken++;clearTimeout(sentenceVoiceTimer);if(sentenceAudioCurrent){sentenceAudioCurrent.pause();sentenceAudioCurrent=null}const choices=messages[ok?'yes':'no'];const [file,msg]=choices[Math.floor(Math.random()*choices.length)];document.getElementById('sentenceHelp').textContent=msg+' ♡';let advanced=false;const advance=()=>{if(advanced)return;advanced=true;sentenceGrading=false;sentenceIndex++;if(document.getElementById('sentencePractice').classList.contains('on'))sentenceNext()};const audio=playFile('audio/'+file+'.mp3');if(audio){audio.addEventListener('ended',()=>setTimeout(advance,150),{once:true});audio.addEventListener('error',()=>setTimeout(advance,150),{once:true});setTimeout(advance,4500)}else setTimeout(advance,800)}
+function sentenceMark(ok){if(!sentenceShown||sentenceGrading)return;sentenceGrading=true;const q=sentenceDeck[sentenceIndex];if(ok){sentenceCorrect++;sentenceWrongSaved.delete(q[2])}else{sentenceIncorrect++;sentenceWrongSaved.add(q[2])}sentenceSaveWrong();sentenceAudioToken++;sentenceVoiceNodes.forEach(n=>{try{n.stop()}catch(e){}});sentenceVoiceNodes=[];clearTimeout(sentenceVoiceTimer);if(sentenceAudioCurrent){sentenceAudioCurrent.pause();sentenceAudioCurrent=null}const choices=messages[ok?'yes':'no'];const [file,msg]=choices[Math.floor(Math.random()*choices.length)];document.getElementById('sentenceHelp').textContent=msg+' ♡';let advanced=false;const advance=()=>{if(advanced)return;advanced=true;sentenceGrading=false;sentenceIndex++;if(document.getElementById('sentencePractice').classList.contains('on'))sentenceNext()};const audio=playFile('audio/'+file+'.mp3');if(audio){audio.addEventListener('ended',()=>setTimeout(advance,150),{once:true});audio.addEventListener('error',()=>setTimeout(advance,150),{once:true});setTimeout(advance,4500)}else setTimeout(advance,800)}
 sentenceClear();sentenceUpdateWrongCount();
 let sentenceAudioQueue=[],sentenceAudioCurrent=null,sentenceAudioToken=0,sentenceVoiceTimer=null;
 function sentenceScheduleVoice(){clearTimeout(sentenceVoiceTimer);const token=sentenceAudioToken;sentenceVoiceTimer=setTimeout(()=>{if(token===sentenceAudioToken&&document.getElementById('sentencePractice').classList.contains('on'))sentenceSpeak()},420)}
 
-function sentenceSpeak(){const q=sentenceDeck[sentenceIndex];if(!q)return;sentenceAudioToken++;const token=sentenceAudioToken;if(sentenceAudioCurrent){sentenceAudioCurrent.pause();sentenceAudioCurrent=null}const chars=Array.from(q[2]).filter(ch=>mapping[ch]||['ぱ','ぴ','ぷ','ぺ','ぽ','パ','ピ','プ','ペ','ポ'].includes(ch));sentenceAudioQueue=chars.map(ch=>{const extra={'ぱ':'pa','ぴ':'pi','ぷ':'pu','ぺ':'pe','ぽ':'po','パ':'pa','ピ':'pi','プ':'pu','ペ':'pe','ポ':'po'};return embeddedSounds[(extra[ch]||'')+'.mp3']||embeddedSounds['clip_'+String(mapping[ch]).padStart(3,'0')+'.mp3']}).filter(Boolean);if(!sentenceAudioQueue.length){document.getElementById('sentenceHelp').textContent='이 문장에 사용할 데포코 음원이 아직 없어 ♡';return}let i=0;function next(){if(token!==sentenceAudioToken||i>=sentenceAudioQueue.length)return;sentenceAudioCurrent=new Audio(sentenceAudioQueue[i++]);sentenceAudioCurrent.playbackRate=1.65;sentenceAudioCurrent.addEventListener('ended',()=>{if(token===sentenceAudioToken)setTimeout(next,0)},{once:true});sentenceAudioCurrent.play().catch(()=>{if(token===sentenceAudioToken)setTimeout(next,20)})}next()}
+function sentenceSpeak(){
+ const q=sentenceDeck[sentenceIndex];if(!q)return;
+ sentenceAudioToken++;const token=sentenceAudioToken;
+ sentenceVoiceNodes.forEach(n=>{try{n.stop()}catch(e){}});sentenceVoiceNodes=[];
+ if(sentenceAudioCurrent){sentenceAudioCurrent.pause();sentenceAudioCurrent=null}
+ const extra={'ぱ':'pa','ぴ':'pi','ぷ':'pu','ぺ':'pe','ぽ':'po','パ':'pa','ピ':'pi','プ':'pu','ペ':'pe','ポ':'po'};
+ const urls=Array.from(q[2]).map(ch=>extra[ch]?embeddedSounds[extra[ch]+'.mp3']:(mapping[ch]?embeddedSounds['clip_'+String(mapping[ch]).padStart(3,'0')+'.mp3']:null)).filter(Boolean);
+ if(!urls.length){document.getElementById('sentenceHelp').textContent='이 문장에 사용할 데포코 음원이 아직 없어 ♡';return}
+ const audioCtxClass=window.AudioContext||window.webkitAudioContext;
+ if(!audioCtxClass){sentenceSpeakFallback(urls,token);return}
+ try{
+  const ctx=sentenceVoiceContext||(sentenceVoiceContext=new audioCtxClass());
+  if(ctx.state==='suspended')ctx.resume().catch(()=>{});
+  Promise.all(urls.map(url=>fetch(url).then(r=>r.arrayBuffer()).then(b=>ctx.decodeAudioData(b)))).then(buffers=>{
+   if(token!==sentenceAudioToken)return;
+   const playbackRate=1.32,overlap=.075;
+   let when=ctx.currentTime+.045;
+   sentenceVoiceNodes=[];
+   buffers.forEach((buffer,i)=>{
+    const source=ctx.createBufferSource();source.buffer=buffer;source.playbackRate.value=playbackRate;
+    const gain=ctx.createGain();source.connect(gain);gain.connect(ctx.destination);
+    const duration=buffer.duration/playbackRate;
+    const fade=Math.min(.025,duration/4);
+    gain.gain.setValueAtTime(0,when);
+    gain.gain.linearRampToValueAtTime(.9,when+fade);
+    gain.gain.setValueAtTime(.9,Math.max(when+fade,when+duration-fade));
+    gain.gain.linearRampToValueAtTime(0,when+duration);
+    source.start(when);source.stop(when+duration);
+    sentenceVoiceNodes.push(source);
+    when+=Math.max(.055,duration-overlap);
+   });
+  }).catch(()=>{if(token===sentenceAudioToken)sentenceSpeakFallback(urls,token)});
+ }catch(e){sentenceSpeakFallback(urls,token)}
+}
+let sentenceVoiceContext=null,sentenceVoiceNodes=[];
+function sentenceSpeakFallback(urls,token){let i=0;function next(){if(token!==sentenceAudioToken||i>=urls.length)return;sentenceAudioCurrent=new Audio(urls[i++]);sentenceAudioCurrent.playbackRate=1.65;sentenceAudioCurrent.addEventListener('ended',next,{once:true});sentenceAudioCurrent.play().catch(()=>{if(token===sentenceAudioToken)next()})}next()}
+
 </script><script id="defoko-interaction">
 const defokoCheer=[
 ['よくできました！','잘하고 있어! ♡'],
